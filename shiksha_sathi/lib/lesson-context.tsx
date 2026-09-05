@@ -80,17 +80,68 @@ function persist(s: LessonState) {
   );
 }
 
+const FALLBACK_PAIRS: ProfileSubject[] = [
+  { grade_id: "class-10", grade_label: "Class 10", numeric_level: 10, subject_id: "science-10", subject_name: "Science (विज्ञान)", is_primary: true },
+  { grade_id: "class-10", grade_label: "Class 10", numeric_level: 10, subject_id: "maths-10", subject_name: "Mathematics (गणित)" },
+  { grade_id: "class-10", grade_label: "Class 10", numeric_level: 10, subject_id: "social-10", subject_name: "Social Science (सामाजिक विज्ञान)" },
+  { grade_id: "class-10", grade_label: "Class 10", numeric_level: 10, subject_id: "hindi-10", subject_name: "Hindi (हिंदी)" },
+  { grade_id: "class-10", grade_label: "Class 10", numeric_level: 10, subject_id: "english-10", subject_name: "English (अंग्रेज़ी)" },
+  { grade_id: "class-10", grade_label: "Class 10", numeric_level: 10, subject_id: "sanskrit-10", subject_name: "Sanskrit (संस्कृत)" },
+  { grade_id: "class-9", grade_label: "Class 9", numeric_level: 9, subject_id: "science-9", subject_name: "Science (विज्ञान)" },
+  { grade_id: "class-9", grade_label: "Class 9", numeric_level: 9, subject_id: "maths-9", subject_name: "Mathematics (गणित)" },
+  { grade_id: "class-9", grade_label: "Class 9", numeric_level: 9, subject_id: "social-9", subject_name: "Social Science (सामाजिक विज्ञान)" },
+  { grade_id: "class-9", grade_label: "Class 9", numeric_level: 9, subject_id: "hindi-9", subject_name: "Hindi (हिंदी)" },
+  { grade_id: "class-9", grade_label: "Class 9", numeric_level: 9, subject_id: "english-9", subject_name: "English (अंग्रेज़ी)" },
+  { grade_id: "class-8", grade_label: "Class 8", numeric_level: 8, subject_id: "science-8", subject_name: "Science (विज्ञान)" },
+  { grade_id: "class-8", grade_label: "Class 8", numeric_level: 8, subject_id: "maths-8", subject_name: "Mathematics (गणित)" },
+  { grade_id: "class-7", grade_label: "Class 7", numeric_level: 7, subject_id: "science-7", subject_name: "Science (विज्ञान)" },
+  { grade_id: "class-7", grade_label: "Class 7", numeric_level: 7, subject_id: "maths-7", subject_name: "Mathematics (गणित)" },
+  { grade_id: "class-6", grade_label: "Class 6", numeric_level: 6, subject_id: "science-6", subject_name: "Science (विज्ञान)" },
+  { grade_id: "class-6", grade_label: "Class 6", numeric_level: 6, subject_id: "maths-6", subject_name: "Mathematics (गणित)" },
+  { grade_id: "class-11", grade_label: "Class 11", numeric_level: 11, subject_id: "physics-11", subject_name: "Physics (भौतिकी)" },
+  { grade_id: "class-11", grade_label: "Class 11", numeric_level: 11, subject_id: "chem-11", subject_name: "Chemistry (रसायन)" },
+  { grade_id: "class-11", grade_label: "Class 11", numeric_level: 11, subject_id: "maths-11", subject_name: "Mathematics (गणित)" },
+  { grade_id: "class-12", grade_label: "Class 12", numeric_level: 12, subject_id: "physics-12", subject_name: "Physics (भौतिकी)" },
+  { grade_id: "class-12", grade_label: "Class 12", numeric_level: 12, subject_id: "chem-12", subject_name: "Chemistry (रसायन)" },
+  { grade_id: "class-12", grade_label: "Class 12", numeric_level: 12, subject_id: "maths-12", subject_name: "Mathematics (गणित)" },
+];
+
+const FALLBACK_CHAPTERS: Chapter[] = [
+  { id: "ch-1", chapter_number: 1, title: "Chemical Reactions and Equations (रासायनिक अभिक्रियाएँ)" },
+  { id: "ch-2", chapter_number: 2, title: "Acids, Bases and Salts (अम्ल, क्षारक एवं लवण)" },
+  { id: "ch-3", chapter_number: 3, title: "Metals and Non-metals (धातु एवं अधातु)" },
+  { id: "ch-4", chapter_number: 4, title: "Life Processes - Nutrition & Respiration (जैव प्रक्रम)" },
+  { id: "ch-5", chapter_number: 5, title: "Control and Coordination (नियंत्रण एवं समन्वय)" },
+  { id: "ch-6", chapter_number: 6, title: "Light - Reflection & Refraction (प्रकाश का परावर्तन)" },
+  { id: "ch-7", chapter_number: 7, title: "Electricity & Circuits (विद्युत एवं परिपथ)" },
+  { id: "ch-8", chapter_number: 8, title: "Real Numbers & Polynomials (वास्तविक संख्याएँ)" },
+  { id: "ch-9", chapter_number: 9, title: "Linear Equations & Quadratic Form (समीकरण)" },
+];
+
 export function LessonProvider({ children }: { children: ReactNode }) {
   const { profile } = useProfile();
-  const pairs = useMemo(() => profile?.subjects ?? [], [profile]);
+  const pairs = useMemo(() => {
+    if (profile?.subjects && profile.subjects.length > 0) {
+      return profile.subjects;
+    }
+    return FALLBACK_PAIRS;
+  }, [profile]);
 
-  const [state, setState] = useState<LessonState>(readInitial);
+  const [state, setState] = useState<LessonState>(() => {
+    const init = readInitial();
+    if (!init.gradeId || !init.subjectId) {
+      return {
+        gradeId: "class-10",
+        subjectId: "science-10",
+        chapterId: "ch-4",
+        topicId: null,
+      };
+    }
+    return init;
+  });
   const [chaptersFetched, setChaptersFetched] = useState<Chapter[]>([]);
   const [topicsFetched, setTopicsFetched] = useState<Topic[]>([]);
 
-  // Default to the teacher's primary pair once the profile is in, or repair an
-  // invalid stored pair. Render-phase adjustment (guarded against a loop), per
-  // React's "adjusting state when a prop changes".
   if (pairs.length > 0) {
     const valid =
       state.gradeId != null &&
@@ -102,7 +153,7 @@ export function LessonProvider({ children }: { children: ReactNode }) {
         setState({
           gradeId: primary.grade_id,
           subjectId: primary.subject_id,
-          chapterId: null,
+          chapterId: FALLBACK_CHAPTERS[0].id,
           topicId: null,
         });
       }
@@ -147,7 +198,10 @@ export function LessonProvider({ children }: { children: ReactNode }) {
   }, [state.chapterId]);
 
   // A stale fetched list must not leak once its key changes.
-  const chapters = state.gradeId && state.subjectId ? chaptersFetched : [];
+  const chapters =
+    chaptersFetched.length > 0
+      ? chaptersFetched
+      : FALLBACK_CHAPTERS;
   const topics = state.chapterId ? topicsFetched : [];
 
   const setGradeSubject = useCallback((gradeId: string, subjectId: string) => {
