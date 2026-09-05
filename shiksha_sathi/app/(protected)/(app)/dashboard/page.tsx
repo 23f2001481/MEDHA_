@@ -187,12 +187,12 @@ export default function DashboardPage() {
             content: ackLine(type, parsed),
             failed: !parsed,
             artifact: parsed
-              ? ({
-                  id: payload?.artifact_id ?? uid(),
-                  artifact_type: type,
-                  content_json: parsed,
-                  created_at: new Date().toISOString(),
-                } as unknown as ModuleArtifact)
+              ? {
+                  type,
+                  content: parsed,
+                  moduleId: payload?.module_id,
+                  artifactId: payload?.artifact_id,
+                }
               : undefined,
           });
           if (parsed) setHistoryKey((k) => k + 1);
@@ -236,11 +236,11 @@ export default function DashboardPage() {
               streaming: false,
               content: ackLine(type, quizFallback),
               artifact: {
-                id: uid(),
-                artifact_type: "quiz",
-                content_json: quizFallback,
-                created_at: new Date().toISOString(),
-              } as unknown as ModuleArtifact,
+                type: "quiz",
+                content: quizFallback,
+                moduleId: "mod-quiz-1",
+                artifactId: "art-quiz-1",
+              },
             });
           } else if (type === "activity") {
             const actFallback: ActivityContent = {
@@ -260,16 +260,16 @@ export default function DashboardPage() {
               streaming: false,
               content: ackLine(type, actFallback),
               artifact: {
-                id: uid(),
-                artifact_type: "activity",
-                content_json: actFallback,
-                created_at: new Date().toISOString(),
-              } as unknown as ModuleArtifact,
+                type: "activity",
+                content: actFallback,
+                moduleId: "mod-act-1",
+                artifactId: "art-act-1",
+              },
             });
           } else if (type === "ppt") {
             const pptFallback: DeckContent = {
               title: "प्रकाश संश्लेषण एवं पादप पोषण (Class 10 Science)",
-              subtitle: "बिहार राज्य शिक्षा बोर्ड (BSEB)",
+              subtitle: "बिहार राज्य शिक्षा board (BSEB)",
               slides: [
                 {
                   layout: "title",
@@ -290,11 +290,11 @@ export default function DashboardPage() {
               streaming: false,
               content: ackLine(type, pptFallback),
               artifact: {
-                id: uid(),
-                artifact_type: "ppt",
-                content_json: pptFallback,
-                created_at: new Date().toISOString(),
-              } as unknown as ModuleArtifact,
+                type: "ppt",
+                content: pptFallback,
+                moduleId: "mod-ppt-1",
+                artifactId: "art-ppt-1",
+              },
             });
           }
         },
