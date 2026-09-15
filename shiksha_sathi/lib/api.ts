@@ -120,6 +120,17 @@ export async function extractErrorMessage(res: Response): Promise<string> {
   return "Something went wrong. Please try again.";
 }
 
+/** Resolves a government school by its 11-digit UDISE code */
+export async function getSchoolByUdise(udiseCode: string): Promise<SchoolSearchResult | null> {
+  try {
+    const res = await apiFetch(`/schools/by-udise/${encodeURIComponent(udiseCode.trim())}`);
+    if (!res.ok) return null;
+    return (await res.json()) as SchoolSearchResult;
+  } catch {
+    return null;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Phase 1 -- lesson generation. Types mirror the FastAPI response bodies in
 // docs/phase-1/{03,05,06}. Each fetcher returns parsed JSON or throws Error.

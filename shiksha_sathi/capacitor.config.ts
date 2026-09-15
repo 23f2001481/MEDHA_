@@ -1,4 +1,16 @@
-import type { CapacitorConfig } from "@capacitor/cli";
+interface CapacitorConfig {
+  appId: string;
+  appName: string;
+  webDir: string;
+  server?: {
+    androidScheme?: string;
+    cleartext?: boolean;
+    url?: string;
+  };
+  android?: {
+    allowMixedContent?: boolean;
+  };
+}
 
 const config: CapacitorConfig = {
   appId: "com.medha.app",

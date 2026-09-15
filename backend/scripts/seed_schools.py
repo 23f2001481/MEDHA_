@@ -1,5 +1,4 @@
-"""Seed a spread of Bihar government schools (with districts + blocks) so the
-registration school-search has realistic data to return.
+"""Seed Bihar government schools (with districts + blocks) with official UDISE+ codes.
 
 Idempotent: districts match on (name, state), blocks on (district_id, name),
 schools on their generated UDISE code. Safe to re-run and safe against a
@@ -14,58 +13,105 @@ from sqlalchemy.orm import Session
 
 from backend.db.models import Block, District, School
 from backend.db.session import SessionLocal, engine
+from backend.reference.udise import BIHAR_DISTRICT_CODES
 
 STATE = "Bihar"
 
-# (district, [(block, [locality, ...]), ...])
-DISTRICTS: list[tuple[str, list[tuple[str, list[str]]]]] = [
-    ("Patna", [
+# Mapping of (district_code, district_name, [(block_name, [locality, ...]), ...])
+DISTRICT_DATA: list[tuple[str, str, list[tuple[str, list[str]]]]] = [
+    ("28", "Patna", [
         ("Patna Sadar", ["Kankarbagh", "Bakerganj", "Gardanibagh", "Kadamkuan"]),
         ("Danapur", ["Khagaul", "Nasriganj", "Danapur Cantt", "Saguna More"]),
+        ("Phulwari Sharif", ["Alinagar", "Nohsa", "Khojpura", "Janipur"]),
+        ("Barh", ["Mokama", "Bakhtiyarpur", "Ghoswari", "Pandarak"]),
     ]),
-    ("Gaya", [
+    ("36", "Gaya", [
         ("Gaya Town", ["Manpur", "Chandauti", "Delha", "Buniyadganj"]),
         ("Bodh Gaya", ["Bakraur", "Pachatti", "Dumariya", "Mocharim"]),
+        ("Sherghati", ["Dobhi", "Barachatti", "Amas", "Guraru"]),
     ]),
-    ("Muzaffarpur", [
+    ("14", "Muzaffarpur", [
         ("Mushahari", ["Ramna", "Bela", "Ahiyapur", "Rohua"]),
         ("Kanti", ["Chakia More", "Panapur", "Rupauli", "Sahebganj"]),
+        ("Motipur", ["Baruraj", "Mahwal", "Kathaiya", "Muraul"]),
     ]),
-    ("Bhagalpur", [
+    ("22", "Bhagalpur", [
         ("Nathnagar", ["Champanagar", "Habibpur", "Lodipur", "Barari"]),
         ("Sabour", ["Ghoghi", "Farka", "Rannuchak", "Ompur"]),
+        ("Kahalgaon", ["Colgong", "Sanokhar", "Pirpainti", "Antichak"]),
     ]),
-    ("Nalanda", [
+    ("27", "Nalanda", [
         ("Bihar Sharif", ["Sohsarai", "Pawapuri", "Kagol", "Ranchi More"]),
         ("Rajgir", ["Silao", "Nekpur", "Bargaon", "Giryek"]),
+        ("Hilsa", ["Islampur", "Ekangarsarai", "Parwalpur", "Karai Parsurai"]),
     ]),
-    ("Darbhanga", [
+    ("13", "Darbhanga", [
         ("Darbhanga Sadar", ["Laheriasarai", "Donar", "Bahadurpur", "Mabbi"]),
         ("Benipur", ["Jhagrua", "Alinagar", "Rasiyari", "Sakri"]),
+        ("Biraul", ["Kusheshwar Asthan", "Ghanshyampur", "Gaura Bauram", "Singhwara"]),
     ]),
-    ("Purnia", [
+    ("09", "Purnia", [
         ("Purnia East", ["Rambagh", "Madhubani", "Kasba Road", "Gulabbagh"]),
         ("Kasba", ["Bishnupur", "Chandrahi", "Saur", "Mahesh Tola"]),
+        ("Banmankhi", ["Dharhara", "Barhara Kothi", "Krityanand Nagar", "Rupouli"]),
     ]),
-    ("Begusarai", [
+    ("20", "Begusarai", [
         ("Begusarai Sadar", ["Lohiyanagar", "Ulao", "Barauni", "Ratanpur"]),
         ("Teghra", ["Refinery Colony", "Phaphaut", "Sadikpur", "Nirpur"]),
+        ("Bakhri", ["Garhpura", "Naokothi", "Bakhaddarpur", "Mansurchak"]),
     ]),
-    ("Saran", [
+    ("17", "Saran", [
         ("Chhapra Sadar", ["Salempur", "Daudpur", "Rasulpur", "Bhikhari Thakur Nagar"]),
         ("Marhaura", ["Dighwara", "Amnour", "Ekma", "Baniapur"]),
+        ("Sonepur", ["Nayagaon", "Dariyapur", "Parsa", "Garkha"]),
     ]),
-    ("Rohtas", [
+    ("32", "Rohtas", [
         ("Sasaram", ["Shivsagar", "Dehri", "Karma", "Tilouthu"]),
         ("Bikramganj", ["Nasriganj", "Dinara", "Nokha", "Rajpur"]),
+        ("Kargahar", ["Chenari", "Sheosagar", "Dawath", "Suryapura"]),
     ]),
-    ("Vaishali", [
+    ("18", "Vaishali", [
         ("Hajipur", ["Jadhua", "Industrial Area", "Ramashish Chowk", "Digha Ghat"]),
         ("Mahnar", ["Lalganj", "Bidupur", "Raghopur", "Jandaha"]),
+        ("Vaishali Sadar", ["Goraul", "Bhagwanpur", "Patedhi Belsar", "Chehrakala"]),
     ]),
-    ("Samastipur", [
+    ("19", "Samastipur", [
         ("Samastipur Sadar", ["Mohanpur", "Kashipur", "Patori", "Ujiyarpur"]),
         ("Rosera", ["Singhia", "Warisnagar", "Hasanpur", "Bibhutipur"]),
+        ("Dalsinghsarai", ["Vidyapatinagar", "Sarairanjan", "Kalyanpur", "Morwa"]),
+    ]),
+    ("01", "Pashchim Champaran", [
+        ("Bettiah", ["Kumarbagh", "Chanpatia", "Majhaulia", "Bairia"]),
+        ("Narkatiaganj", ["Sikta", "Mainatand", "Gaunaha", "Lauriya"]),
+    ]),
+    ("02", "Purbi Champaran", [
+        ("Motihari", ["Chauradano", "Raxaul", "Sugauli", "Areraj"]),
+        ("Chakia", ["Mehsi", "Kalyanpur", "Kesaria", "Kotwa"]),
+    ]),
+    ("05", "Madhubani", [
+        ("Madhubani Sadar", ["Rajnagar", "Pandaul", "Sakri", "Kaluahi"]),
+        ("Jhanjharpur", ["Benipatti", "Babubarhi", "Khajauli", "Laukaha"]),
+    ]),
+    ("15", "Gopalganj", [
+        ("Gopalganj Sadar", ["Thawe", "Kuchaikote", "Hathua", "Mirganj"]),
+    ]),
+    ("16", "Siwan", [
+        ("Siwan Sadar", ["Mairwa", "Maharajganj", "Barharia", "Andar"]),
+    ]),
+    ("29", "Bhojpur", [
+        ("Ara Sadar", ["Jagdishpur", "Piro", "Koilwar", "Sandesh"]),
+    ]),
+    ("30", "Buxar", [
+        ("Buxar Sadar", ["Dumraon", "Itarhi", "Chaugain", "Simri"]),
+    ]),
+    ("35", "Aurangabad", [
+        ("Aurangabad Sadar", ["Daudnagar", "Rafiganj", "Obra", "Goh"]),
+    ]),
+    ("37", "Nawada", [
+        ("Nawada Sadar", ["Rajauli", "Hisua", "Pakribarawan", "Warisaliganj"]),
+    ]),
+    ("38", "Jamui", [
+        ("Jamui Sadar", ["Jhajha", "Sono", "Chakai", "Sikandra"]),
     ]),
 ]
 
@@ -78,30 +124,30 @@ TEMPLATES: list[tuple[str, str, str]] = [
     ("Govt Girls High School, {p}", "secondary", "Hindi"),
     ("Govt +2 High School, {p}", "senior_secondary", "Hindi & English"),
     ("Kasturba Gandhi Balika Vidyalaya, {p}", "residential", "Hindi"),
-    ("Project Balika Uchch Vidyalaya, {p}", "secondary", "Hindi"),
+    ("Model School, {p}", "senior_secondary", "English & Hindi"),
 ]
 
 
-def get_or_create(db: Session, model, defaults: dict | None = None, **lookup):
-    instance = db.query(model).filter_by(**lookup).one_or_none()
+def get_or_create(db: Session, model, **kwargs):
+    instance = db.query(model).filter_by(**kwargs).one_or_none()
     if instance is not None:
         return instance, False
-    instance = model(**lookup, **(defaults or {}))
+    instance = model(**kwargs)
     db.add(instance)
     db.flush()
     return instance, True
 
 
-def seed(db: Session) -> None:
-    made_d = made_b = made_s = 0
+def seed(db: Session) -> tuple[int, int, int]:
+    made_d, made_b, made_s = 0, 0, 0
 
-    for di, (district_name, blocks) in enumerate(DISTRICTS, start=1):
+    for dist_code, district_name, blocks in DISTRICT_DATA:
         district, created = get_or_create(
             db, District, name=district_name, state=STATE
         )
         made_d += created
         if created:
-            print(f"  + district  {district_name}")
+            print(f"  + district  [{dist_code}] {district_name}")
 
         for bi, (block_name, localities) in enumerate(blocks, start=1):
             block, created = get_or_create(
@@ -112,12 +158,11 @@ def seed(db: Session) -> None:
                 print(f"    + block   {district_name} / {block_name}")
 
             for si, locality in enumerate(localities, start=1):
-                # advance the template across districts/blocks/localities so the
-                # full spread of school types shows up, not just the first four
-                idx = (di - 1 + (bi - 1) * len(localities) + (si - 1)) % len(TEMPLATES)
+                idx = (int(dist_code) - 1 + (bi - 1) * len(localities) + (si - 1)) % len(TEMPLATES)
                 tmpl, school_type, medium = TEMPLATES[idx]
                 name = tmpl.format(p=locality)
-                udise = f"10{di:02d}{bi:02d}{si:05d}"  # 11 digits, state 10 = Bihar
+                # Official UDISE standard: 10 (Bihar) + 2-digit district + 2-digit block + 5-digit village & school
+                udise = f"10{dist_code}{bi:02d}{si:05d}"
 
                 school = (
                     db.query(School).filter(School.udise_code == udise).one_or_none()
@@ -136,31 +181,25 @@ def seed(db: Session) -> None:
                     made_s += 1
                     print(f"      + school  [{udise}] {name}")
                 else:
-                    # keep the seeded fields in sync on re-run
                     school.name = name
-                    school.district_id = district.id
-                    school.block_id = block.id
-                    school.school_type = school_type
-                    school.medium_of_instruction = medium
 
-    total_s = db.query(School).count()
-    print(
-        f"\nnew: {made_d} districts, {made_b} blocks, {made_s} schools   "
-        f"(db now: {db.query(District).count()} districts, "
-        f"{db.query(Block).count()} blocks, {total_s} schools)"
-    )
+    db.commit()
+    return made_d, made_b, made_s
 
 
 def main() -> None:
-    print(f"target database: {engine.url.render_as_string(hide_password=True)}")
+    print("Connecting to database...")
     db = SessionLocal()
     try:
-        seed(db)
-        db.commit()
-        print("committed.")
-    except Exception:
-        db.rollback()
-        raise
+        print(f"Seeding Bihar schools across districts...")
+        d, b, s = seed(db)
+        total_s = db.query(School).count()
+        total_d = db.query(District).count()
+        total_b = db.query(Block).count()
+        print(
+            f"Done. Added {d} districts, {b} blocks, {s} schools. "
+            f"Database now has {total_d} districts, {total_b} blocks, {total_s} schools."
+        )
     finally:
         db.close()
 
